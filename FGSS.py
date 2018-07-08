@@ -1,57 +1,143 @@
 import pandas as pd
-import numpy as np
-from sklearn import preprocessing
+from collective_anomaly_detection.data_processing import *
+from collective_anomaly_detection.DeepAutoEncoderClass import AutoEncoder
+import random
+import math
 
-def normalize_data(X):
-    X = preprocessing.normalize(X, axis=1)
-    return X
 
-def get_data():
-    col_names = ["duration", "protocol_type", "service", "flag", "src_bytes",
-                 "dst_bytes", "land", "wrong_fragment", "urgent", "hot", "num_failed_logins",
-                 "logged_in", "num_compromised", "root_shell", "su_attempted", "num_root",
-                 "num_file_creations", "num_shells", "num_access_files", "num_outbound_cmds",
-                 "is_host_login", "is_guest_login", "count", "srv_count", "serror_rate",
-                 "srv_serror_rate", "rerror_rate", "srv_rerror_rate", "same_srv_rate",
-                 "diff_srv_rate", "srv_diff_host_rate", "dst_host_count", "dst_host_srv_count",
-                 "dst_host_same_srv_rate", "dst_host_diff_srv_rate", "dst_host_same_src_port_rate",
-                 "dst_host_srv_diff_host_rate", "dst_host_serror_rate", "dst_host_srv_serror_rate",
-                 "dst_host_rerror_rate", "dst_host_srv_rerror_rate", "label"]
-    kdd_data_10percent = pd.read_csv("./data/kddcup.data_10_percent_corrected", header=None, names=col_names)
-    num_features = [
-        "duration", "src_bytes",
-        "dst_bytes", "land", "wrong_fragment", "urgent", "hot", "num_failed_logins",
-        "logged_in", "num_compromised", "root_shell", "su_attempted", "num_root",
-        "num_file_creations", "num_shells", "num_access_files", "num_outbound_cmds",
-        "is_host_login", "is_guest_login", "count", "srv_count", "serror_rate",
-        "srv_serror_rate", "rerror_rate", "srv_rerror_rate", "same_srv_rate",
-        "diff_srv_rate", "srv_diff_host_rate", "dst_host_count", "dst_host_srv_count",
-        "dst_host_same_srv_rate", "dst_host_diff_srv_rate", "dst_host_same_src_port_rate",
-        "dst_host_srv_diff_host_rate", "dst_host_serror_rate", "dst_host_srv_serror_rate",
-        "dst_host_rerror_rate", "dst_host_srv_rerror_rate", "label"
-    ]
+def shorten_data(Xnormal, Ynormal, Xanomaly, Yanomaly):
+    return Xnormal[:50], Ynormal[:50], Xanomaly[:50], Yanomaly[:50]
 
-    # labels = kdd_data_10percent['label'].copy()
-    # labels[labels != 'normal.'] = 'attack.'
-    # labels.value_counts()
-    # data = kdd_data_10percent[num_features].astype(float)
-    data = kdd_data_10percent[num_features]
-    # data = np.array(data)
-    # data = normalize_data(data)
-    return data
 
-def distinguishAnomalousRecords(data):
-    normalRecords = data[(data["label"] == "normal.")]
-    anoRecords = data[(data["label"] != "normal.")]
-    nR = np.array(normalRecords)[:, 0:-1].astype(float)
-    nL = np.array(normalRecords)[:, -1]
-    aR = np.array(anoRecords)[:, 0:-1].astype(float)
-    aL = np.array(anoRecords)[:, -1]
-    return normalize_data(nR), nL, normalize_data(aR), aL
+class CollectiveAnomalyDetection(object):
+    def __init__(self, model):
+        self.model = model
+
+    def run(self, epochs=5):
+        data = read_data()
+        Xnormal, Ynormal, Xanomaly, Yanomaly = distinguishAnomalousRecords(data)
+        Xnormal, Ynormal, Xanomaly, Yanomaly = shorten_data(Xnormal, Ynormal, Xanomaly, Yanomaly)
+
+        T1, T2 = self.split_train_set(Xnormal)
+
+        self.model.train(T1, num_steps=2)
+        train_recon_error = self.model.predict(T2)
+        test_recon_error = self.model.predict(Xanomaly)
+
+        p_value = self.create_p_value_matrix(train_recon_error, test_recon_error)
+        alpha_values = self.get_unique_alpha_values(p_value)
+        self.fgss_wrapper(p_value, alpha_values, epochs)
+
+    def fgss_wrapper(self, p_value, alpha_values, epochs=5):
+        for i in range(epochs):
+            alpha, records = self.fgss(p_value, alpha_values)
+            p_value = p_value[records]
+            alpha, labels = self.fgss(p_value.T, alpha_values)
+            p_value = p_value.T
+            p_value = p_value[labels]
+            p_value = p_value.T
+
+    def split_train_set(self, trainset):
+        mid = int(len(trainset) / 2)
+        train_set1 = trainset[:mid, ]
+        train_set2 = trainset[mid:, ]
+        return train_set1, train_set2
+
+    def create_p_value_matrix(self, train_error, test_error):
+        train_error_df = pd.DataFrame(train_error)
+        test_error_df = pd.DataFrame(test_error, index=list(range(test_error.shape[0])),
+                                     columns=list(range(test_error.shape[1])))
+
+        rows, cols = test_error_df.shape
+
+        for i in range(rows):
+            for j in range(cols):
+                val = train_error_df[j][test_error_df.iloc[i][j] < train_error_df[j]].count()
+                test_error_df.iloc[i][j] = val
+
+        return test_error_df
+
+    def reduce_dataset(self, data, percentage):
+        if (percentage >= len(data)):
+            cut = len(data)
+        else:
+            cut = int(percentage / 100 * len(data))
+        return data[: cut]
+
+    def get_unique_alpha_values(self, p_value):
+        return np.unique(p_value)
+
+    def select_random(self, vector):
+        # threshold = random.random()
+        threshold = 999999.0
+        selected_cols = []
+
+        for col in vector:
+            random_num = random.random()
+            if (random_num >= threshold):
+                selected_cols.append(col)
+        if len(selected_cols) == 0:
+            # selected_cols = self.select_random(vector)
+            selected_cols.append(vector[0])
+        return selected_cols
+
+    def compute_N_alpha(self, p_value, alpha):
+        N_alpha = pd.DataFrame(0, columns=list(p_value.columns.values), index=list(p_value.index.values))
+
+        for i, row in p_value.iterrows():
+            for j, value in row.iteritems():
+                if value > alpha:
+                    N_alpha.iloc[i][j] = 1
+                else:
+                    N_alpha.iloc[i][j] = 0
+
+        return pd.DataFrame(N_alpha)
+
+    def obtain_subset_with_max_score(self, sorted_index, N_alpha_sum, alpha, n_cols):
+        subset_score = 0
+        max_score = 0
+        end_index = 0
+        for index in sorted_index:
+            subset_score = subset_score + N_alpha_sum[index]
+            ideal_score = (index + 1) * n_cols * alpha
+            numerator = subset_score - ideal_score
+            val = subset_score * ideal_score
+            if (subset_score * ideal_score > 0):
+                denominator = math.sqrt(subset_score * ideal_score)
+                calculated_score = numerator / denominator
+            else:
+                calculated_score = 0
+            if (calculated_score > 0 and calculated_score > subset_score):
+                max_score = calculated_score
+                end_index = index
+        return sorted_index[: end_index + 1], max_score
+
+    def fgss(self, p_value, alpha_values):
+        dropping_cols = self.select_random(list(p_value.columns.values))
+        print(dropping_cols)
+
+        selected_cols = list(set(list(p_value.columns.values)) - set(dropping_cols))
+
+        p_value = p_value.drop(dropping_cols, axis=1)
+        best_alpha = 0
+        best_score = -1
+        best_subset = []
+        for alpha in alpha_values:
+            N_alpha = self.compute_N_alpha(p_value, alpha)
+            N_alpha_sum = N_alpha.sum(axis=1).values
+            sorted_index = np.argsort(N_alpha_sum)
+            subset_index, score = self.obtain_subset_with_max_score(sorted_index, N_alpha_sum, alpha,
+                                                                    len(selected_cols))
+            if (score > best_score):
+                best_alpha = alpha
+                best_score = score
+                best_subset = subset_index
+
+        return best_alpha, best_subset
+
 
 if __name__ == '__main__':
-    print("Loading Data...")
-    data = get_data()
-    print("Loaded the Dataset")
-    Xnormal, Ynormal, Xanomaly, Yanomaly = distinguishAnomalousRecords(data)
-    print("Distinguished Data")
+    # using 2 hidden layers
+    collective_anomaly_detection = CollectiveAnomalyDetection(AutoEncoder(10, 5))
+    collective_anomaly_detection.run()
+    print("Done")
