@@ -1,32 +1,40 @@
 import pandas as pd
 from collective_anomaly_detection.data_processing import *
 from collective_anomaly_detection.DeepAutoEncoderClass import AutoEncoder
+from collective_anomaly_detection.result_storer import store_in_excel
+
 import random
 import math
 
 
 def shorten_data(Xnormal, Ynormal, Xanomaly, Yanomaly):
-    return Xnormal[:50], Ynormal[:50], Xanomaly[:50], Yanomaly[:50]
+    # return Xnormal[:2000], Ynormal[:2000], Xanomaly[:50], Yanomaly[:50]
+    return Xnormal, Ynormal, Xanomaly[:50], Yanomaly[:50]
 
+def split_train_set(trainset):
+    mid = int(len(trainset) / 2)
+    train_set1 = trainset[:mid, ]
+    train_set2 = trainset[mid:, ]
+    return train_set1, train_set2
 
 class CollectiveAnomalyDetection(object):
     def __init__(self, model):
         self.model = model
 
-    def run(self, epochs=5):
-        data = read_data()
-        Xnormal, Ynormal, Xanomaly, Yanomaly = distinguishAnomalousRecords(data)
-        Xnormal, Ynormal, Xanomaly, Yanomaly = shorten_data(Xnormal, Ynormal, Xanomaly, Yanomaly)
-
-        T1, T2 = self.split_train_set(Xnormal)
-
-        self.model.train(T1, num_steps=2)
+    def run(self, T1, T2, Xanomaly, epochs=5):
+        self.model.train(T1, Xanomaly, alpha=0.00001, num_steps=500)
         train_recon_error = self.model.predict(T2)
         test_recon_error = self.model.predict(Xanomaly)
 
         p_value = self.create_p_value_matrix(train_recon_error, test_recon_error)
-        alpha_values = self.get_unique_alpha_values(p_value)
-        self.fgss_wrapper(p_value, alpha_values, epochs)
+
+        train_recon_error_df = pd.DataFrame(train_recon_error, index=list(range(train_recon_error.shape[0])),
+                                            columns=list(range(train_recon_error.shape[1])))
+        test_recon_error_df = pd.DataFrame(test_recon_error, index=list(range(test_recon_error.shape[0])),
+                                           columns=list(range(test_recon_error.shape[1])))
+        store_in_excel(train_recon_error_df, test_recon_error_df, p_value, 'reconstruction_errors', 2)
+        # alpha_values = self.get_unique_alpha_values(p_value)
+        # self.fgss_wrapper(p_value, alpha_values, epochs)
 
     def fgss_wrapper(self, p_value, alpha_values, epochs=5):
         for i in range(epochs):
@@ -37,25 +45,22 @@ class CollectiveAnomalyDetection(object):
             p_value = p_value[labels]
             p_value = p_value.T
 
-    def split_train_set(self, trainset):
-        mid = int(len(trainset) / 2)
-        train_set1 = trainset[:mid, ]
-        train_set2 = trainset[mid:, ]
-        return train_set1, train_set2
+
 
     def create_p_value_matrix(self, train_error, test_error):
         train_error_df = pd.DataFrame(train_error)
         test_error_df = pd.DataFrame(test_error, index=list(range(test_error.shape[0])),
                                      columns=list(range(test_error.shape[1])))
-
+        p_value_df = pd.DataFrame(0, index=list(range(test_error.shape[0])),
+                                  columns=list(range(test_error.shape[1])))
         rows, cols = test_error_df.shape
 
         for i in range(rows):
             for j in range(cols):
                 val = train_error_df[j][test_error_df.iloc[i][j] < train_error_df[j]].count()
-                test_error_df.iloc[i][j] = val
+                p_value_df.iloc[i][j] = val
 
-        return test_error_df
+        return p_value_df
 
     def reduce_dataset(self, data, percentage):
         if (percentage >= len(data)):
@@ -137,7 +142,14 @@ class CollectiveAnomalyDetection(object):
 
 
 if __name__ == '__main__':
+    data = read_data()
+    Xnormal, Ynormal, Xanomaly, Yanomaly = distinguishAnomalousRecords(data)
+    # Xnormal, Ynormal, Xanomaly, Yanomaly = shorten_data(Xnormal, Ynormal, Xanomaly, Yanomaly)
+
+    T1, T2 = split_train_set(Xnormal)
+
+
     # using 2 hidden layers
-    collective_anomaly_detection = CollectiveAnomalyDetection(AutoEncoder(10, 5))
-    collective_anomaly_detection.run()
+    collective_anomaly_detection = CollectiveAnomalyDetection(AutoEncoder(10, 5, Xanomaly))
+    collective_anomaly_detection.run(T1=T1, T2=T2, Xanomaly= Xanomaly)
     print("Done")

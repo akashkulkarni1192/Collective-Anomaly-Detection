@@ -1,6 +1,8 @@
 from sklearn import preprocessing
 import pandas as pd
 import numpy as np
+import tensorflow as tf
+
 
 def read_data():
     col_names = ["duration", "protocol_type", "service", "flag", "src_bytes",
