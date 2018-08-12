@@ -91,7 +91,7 @@ def decoder(x):
                                    biases['decoder_b2']))
     return layer_2
 
-# Construct model
+# Construct models
 encoder_op = encoder(X)
 decoder_op = decoder(encoder_op)
 
