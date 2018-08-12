@@ -1,13 +1,13 @@
 from data_processing import *
 from DeepAutoEncoderClass import AutoEncoder
-from result_storer import store_in_excel
+from result_storer import store_in_excel,load_from_excel
 
 import random
 import math
 
 
 def shorten_data(Xnormal, Ynormal, Xanomaly, Yanomaly):
-    # return Xnormal[:2000], Ynormal[:2000], Xanomaly[:50], Yanomaly[:50]
+    # return Xnormal[:2000], Ynormal[:2000], Xanomaly[:1000], Yanomaly[:1000]
     return Xnormal[:200], Ynormal[:200], Xanomaly[:50], Yanomaly[:50]
 
 
@@ -22,40 +22,61 @@ class CollectiveAnomalyDetection(object):
     def __init__(self, model):
         self.model = model
 
-    def run(self, T1, T2, Xanomaly, cache = False, epochs=5):
+    def run(self, T1, T2, Xanomaly, cache=False, use_stored_result=False, epochs=5):
+        print("Starting Code ...")
         if cache == False:
+            print("Training Model ...")
             self.model.train(T1, Xanomaly, alpha=0.00001, num_steps=20000)
 
-        print("Creating Training Reconstruction error...")
-        train_recon_error = self.model.predict(T2)
-        print("Creating Test Reconstruction error...")
-        test_recon_error = self.model.predict(Xanomaly)
-        print("Creating P Value...")
-        p_value = self.create_p_value_matrix(train_recon_error, test_recon_error)
+        if use_stored_result == False:
+            print("Creating Training Reconstruction Error...")
+            train_recon_error = self.model.predict(T2)
+            print("Creating Test Reconstruction Error...")
+            test_recon_error = self.model.predict(Xanomaly)
+            print("Creating P Value...")
 
-        train_recon_error_df = pd.DataFrame(train_recon_error, index=list(range(train_recon_error.shape[0])),
-                                            columns=list(range(train_recon_error.shape[1])))
-        test_recon_error_df = pd.DataFrame(test_recon_error, index=list(range(test_recon_error.shape[0])),
-                                           columns=list(range(test_recon_error.shape[1])))
-        store_in_excel(train_recon_error_df, test_recon_error_df, p_value, 'reconstruction_errors', 0)
+            p_value = self.create_p_value_matrix(train_recon_error, test_recon_error)
+
+            train_recon_error_df = pd.DataFrame(train_recon_error, index=list(range(train_recon_error.shape[0])),
+                                                columns=list(range(train_recon_error.shape[1])))
+            test_recon_error_df = pd.DataFrame(test_recon_error, index=list(range(test_recon_error.shape[0])),
+                                               columns=list(range(test_recon_error.shape[1])))
+
+            store_in_excel(train_recon_error_df, test_recon_error_df, p_value, 'reconstruction_errors', 100)
+        else:
+            print("Loading existing stored data ...")
+            train_recon_error_df, test_recon_error_df, p_value = load_from_excel("reconstruction_errors0.xlsx")
+
+
         # alpha_values = self.get_unique_alpha_values(p_value)
-        # self.fgss_wrapper(p_value, epochs)
+        self.fgss_wrapper(p_value, epochs)
+        print("ENDDD")
 
     def fgss_wrapper(self, master_p_value, epochs=5):
+        print("Starting FGSS ...")
         global_rows, global_cols, global_alpha, global_score = None, None, None, -1
 
         for epoch in range(epochs):
-
+            print("Epoch " + str(epoch) + " starting ...")
             prev_rows, prev_cols, prev_alpha, prev_score = None, None, None, -1
 
             while (True):
                 # Considering all rows, selective columns -> get selected rows
                 p_value = master_p_value.copy()
                 dropping_cols = self.select_random(list(p_value.columns.values))
+                print("Running FGSS step for random columns ...")
                 rows, cols, alpha, score = self.fgsss(p_value, dropping_cols)
+                print("Current Score : "+str(score))
                 if (score < prev_score):
+                    print("Epoch "+str(epoch)+" ending...")
+                    print("Prev Score : "+str(prev_score))
                     break
                 else:
+                    print("\tStoring updated score ...")
+                    print("\tScore : "+str(score))
+                    print("\talpha : "+str(alpha))
+                    print("\trows  : "+str(rows))
+                    print("\tcols  : "+str(cols))
                     prev_score = score
                     prev_rows = rows
                     prev_cols = cols
@@ -64,21 +85,41 @@ class CollectiveAnomalyDetection(object):
                 # Considering all columns, selective rows -> get selected columns
                 p_value = master_p_value.T.copy()
                 dropping_cols = self.select_random(list(p_value.columns.values))
+                print("Running FGSS step for random rows ...")
                 cols, rows, alpha, score = self.fgsss(p_value, dropping_cols)
+                print("Current Score : "+str(score))
                 if (score < prev_score):
+                    print("Epoch " + str(epoch) + " ending...")
+                    print("Prev Score : " + str(prev_score))
                     break
                 else:
+                    print("\tStoring updated score ...")
+                    print("\tScore : " + str(score))
+                    print("\talpha : " + str(alpha))
+                    print("\trows  : " + str(rows))
+                    print("\tcols  : " + str(cols))
                     prev_score = score
                     prev_rows = rows
                     prev_cols = cols
                     prev_alpha = alpha
 
-                print(score)
             if (prev_score > global_score):
+                print("\n-----Updating global score ... ------")
+                print("\tGlobal Score : " + str(prev_score))
+                print("\tGlobal alpha : " + str(prev_alpha))
+                print("\tGlobal rows  : " + str(prev_rows))
+                print("\tGlobal cols  : " + str(prev_cols))
+                print("-------------------------------------\n")
                 global_score = prev_score
                 global_rows = prev_rows
                 global_cols = prev_cols
                 global_alpha = prev_alpha
+
+        print("\n\tReturning global score ...")
+        print("\tGlobal Score : " + str(prev_score))
+        print("\tGlobal alpha : " + str(prev_alpha))
+        print("\tGlobal rows  : " + str(prev_rows))
+        print("\tGlobal cols  : " + str(prev_cols))
 
         return global_rows, global_cols, global_alpha, global_score
 
@@ -90,6 +131,8 @@ class CollectiveAnomalyDetection(object):
         best_score = -1
         best_subset = []
         for alpha in alpha_values:
+            if alpha == 0:
+                continue
             N_alpha = self.compute_N_alpha(p_value, alpha)
             N_alpha_sum = N_alpha.sum(axis=1).values
             sorted_index = np.argsort(N_alpha_sum)
@@ -131,7 +174,7 @@ class CollectiveAnomalyDetection(object):
 
     def select_random(self, vector):
         # threshold = random.random()
-        threshold = 999999.0
+        threshold = 0.5
         selected_cols = []
 
         for col in vector:
@@ -180,41 +223,44 @@ class CollectiveAnomalyDetection(object):
                 end_index = index
         return sorted_index[: end_index + 1], max_score
 
-    # def fgss(self, p_value, alpha_values):
-    #     dropping_cols = self.select_random(list(p_value.columns.values))
-    #     print(dropping_cols)
-    #
-    #     selected_cols = list(set(list(p_value.columns.values)) - set(dropping_cols))
-    #
-    #     p_value = p_value.drop(dropping_cols, axis=1)
-    #     best_alpha = 0
-    #     best_score = -1
-    #     best_subset = []
-    #     for alpha in alpha_values:
-    #         N_alpha = self.compute_N_alpha(p_value, alpha)
-    #         N_alpha_sum = N_alpha.sum(axis=1).values
-    #         sorted_index = np.argsort(N_alpha_sum)
-    #         subset_index, score = self.obtain_subset_with_max_score(sorted_index, N_alpha_sum, alpha,
-    #                                                                 len(selected_cols))
-    #         if (score > best_score):
-    #             best_alpha = alpha
-    #             best_score = score
-    #             best_subset = subset_index
-    #
-    #     return best_alpha, best_subset
+        # def fgss(self, p_value, alpha_values):
+        #     dropping_cols = self.select_random(list(p_value.columns.values))
+        #     print(dropping_cols)
+        #
+        #     selected_cols = list(set(list(p_value.columns.values)) - set(dropping_cols))
+        #
+        #     p_value = p_value.drop(dropping_cols, axis=1)
+        #     best_alpha = 0
+        #     best_score = -1
+        #     best_subset = []
+        #     for alpha in alpha_values:
+        #         N_alpha = self.compute_N_alpha(p_value, alpha)
+        #         N_alpha_sum = N_alpha.sum(axis=1).values
+        #         sorted_index = np.argsort(N_alpha_sum)
+        #         subset_index, score = self.obtain_subset_with_max_score(sorted_index, N_alpha_sum, alpha,
+        #                                                                 len(selected_cols))
+        #         if (score > best_score):
+        #             best_alpha = alpha
+        #             best_score = score
+        #             best_subset = subset_index
+        #
+        #     return best_alpha, best_subset
 
 
 def main():
     data = read_data()
     Xnormal, Ynormal, Xanomaly, Yanomaly = distinguishAnomalousRecords(data)
-    Xnormal, Ynormal, Xanomaly, Yanomaly = shorten_data(Xnormal, Ynormal, Xanomaly, Yanomaly)
+    # Xnormal, Ynormal, Xanomaly, Yanomaly = shorten_data(Xnormal, Ynormal, Xanomaly, Yanomaly)
 
     T1, T2 = split_train_set(Xnormal)
 
     # using 2 hidden layers
     use_cached_model = True
+    use_stored_results = True
+
     collective_anomaly_detection = CollectiveAnomalyDetection(AutoEncoder(10, 5, Xanomaly, use_cached_model))
-    collective_anomaly_detection.run(T1=T1, T2=T2, Xanomaly=Xanomaly, cache=use_cached_model)
+    collective_anomaly_detection.run(T1=T1, T2=T2, Xanomaly=Xanomaly, cache=use_cached_model, use_stored_result=use_stored_results)
     print("Done")
+
 
 main()
