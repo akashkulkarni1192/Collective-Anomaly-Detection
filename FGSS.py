@@ -42,10 +42,10 @@ class CollectiveAnomalyDetection(object):
             test_recon_error_df = pd.DataFrame(test_recon_error, index=list(range(test_recon_error.shape[0])),
                                                columns=list(range(test_recon_error.shape[1])))
 
-            store_in_excel(train_recon_error_df, test_recon_error_df, p_value, 'reconstruction_errors', 100)
+            store_in_excel(train_recon_error_df, test_recon_error_df, p_value, 'reconstruction_errors', 3)
         else:
             print("Loading existing stored data ...")
-            train_recon_error_df, test_recon_error_df, p_value = load_from_excel("reconstruction_errors0.xlsx")
+            train_recon_error_df, test_recon_error_df, p_value = load_from_excel("reconstruction_errors100.xlsx")
 
 
         # alpha_values = self.get_unique_alpha_values(p_value)
