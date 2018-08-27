@@ -35,7 +35,7 @@ class AutoEncoder(object):
         self.sess = tf.Session()
         if cache:
             saver = tf.train.Saver()
-            saver.restore(self.sess, "./models/autoencoder.ckpt")
+            saver.restore(self.sess, "./models/autoencoder_processed.ckpt")
 
 
     def train(self, data, test_data, alpha=0.001, batch_size=20, num_steps=100):
@@ -74,7 +74,7 @@ class AutoEncoder(object):
                 # summary_writer.add_summary(summary, i)
 
         saver = tf.train.Saver()
-        save_path = saver.save(self.sess, "./models/autoencoder.ckpt")
+        save_path = saver.save(self.sess, "./models/autoencoder_processed.ckpt")
 
         print("Model Saved at Path : " + save_path)
 

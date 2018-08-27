@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-def store_in_excel(train_error, test_error, p_value, filename, version=0):
+def store_in_excel(train_error, test_error, p_value, train_p_value, filename, version=0):
     filename = './results/' + filename + str(version) + '.xlsx'
     dir = os.getcwd()
 
@@ -14,8 +14,10 @@ def store_in_excel(train_error, test_error, p_value, filename, version=0):
     train_error.to_excel(writer, 'TrainError')
     print("Writing Test Error...")
     test_error.to_excel(writer, 'TestError')
-    print("Dumping Data into Excel")
-    p_value.to_excel(writer, 'P_Value')
+    print("Writing Training P Value in Excel")
+    train_p_value.to_excel(writer, 'Train_P_Value')
+    print("Writing Testing P Value in Excel")
+    p_value.to_excel(writer, 'Test_P_Value')
 
     writer.save()
 
