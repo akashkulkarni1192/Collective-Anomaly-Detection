@@ -28,6 +28,8 @@ def load_from_excel(filename):
 
     train_df = xl.parse("TrainError")
     test_df = xl.parse("TestError")
-    p_value_df = xl.parse("P_Value")
+    train_p_value_df = xl.parse("Train_P_Value")
 
-    return train_df, test_df, p_value_df
+    test_p_value_df = xl.parse("Test_P_Value")
+
+    return train_df, test_df, train_p_value_df, test_p_value_df

@@ -1,0 +1,118 @@
+/Users/akashkulkarni/anaconda3/bin/python /Users/akashkulkarni/GitWorld/Collective-Anomaly-Detection/FGSS.py
+Shortening the data ...
+2018-08-21 15:32:07.585382: W tensorflow/core/platform/cpu_feature_guard.cc:45] The TensorFlow library wasn't compiled to use SSE4.1 instructions, but these are available on your machine and could speed up CPU computations.
+2018-08-21 15:32:07.585396: W tensorflow/core/platform/cpu_feature_guard.cc:45] The TensorFlow library wasn't compiled to use SSE4.2 instructions, but these are available on your machine and could speed up CPU computations.
+2018-08-21 15:32:07.585401: W tensorflow/core/platform/cpu_feature_guard.cc:45] The TensorFlow library wasn't compiled to use AVX instructions, but these are available on your machine and could speed up CPU computations.
+2018-08-21 15:32:07.585406: W tensorflow/core/platform/cpu_feature_guard.cc:45] The TensorFlow library wasn't compiled to use AVX2 instructions, but these are available on your machine and could speed up CPU computations.
+2018-08-21 15:32:07.585410: W tensorflow/core/platform/cpu_feature_guard.cc:45] The TensorFlow library wasn't compiled to use FMA instructions, but these are available on your machine and could speed up CPU computations.
+Starting Code ...
+Creating Training Reconstruction Error...
+Creating Test Reconstruction Error...
+Creating P Value...
+Creating Excel Writer...
+Writing Training Error...
+Writing Test Error...
+Dumping Data into Excel
+Starting FGSS ...
+Epoch 0 starting ...
+Running FGSS step for random columns ...
+Current Score : 11465.2431583
+	Storing updated score ...
+	Score : 11465.2431583
+	alpha : 0.002
+	rows  : [  2   4   5   3   0   1 329]
+	cols  : [0, 1, 2, 4, 8, 9, 11, 12, 16, 17, 18, 19, 21, 25, 27, 29, 30, 33, 35, 36]
+Running FGSS step for random rows ...
+Current Score : 8022.02604107
+Epoch 0 ending...
+Prev Score : 11465.2431583
+
+-----Updating global score ... ------
+	Global Score : 11465.2431583
+	Global alpha : 0.002
+	Global rows  : [  2   4   5   3   0   1 329]
+	Global cols  : [0, 1, 2, 4, 8, 9, 11, 12, 16, 17, 18, 19, 21, 25, 27, 29, 30, 33, 35, 36]
+-------------------------------------
+
+Epoch 1 starting ...
+Running FGSS step for random columns ...
+Current Score : 18968.5474465
+	Storing updated score ...
+	Score : 18968.5474465
+	alpha : 0.002
+	rows  : [4 5 1 0]
+	cols  : [2, 3, 4, 5, 6, 11, 12, 14, 16, 17, 18, 21, 23, 24, 25, 27, 31, 32, 34, 37]
+Running FGSS step for random rows ...
+Current Score : 8230.12216547
+Epoch 1 ending...
+Prev Score : 18968.5474465
+
+-----Updating global score ... ------
+	Global Score : 18968.5474465
+	Global alpha : 0.002
+	Global rows  : [4 5 1 0]
+	Global cols  : [2, 3, 4, 5, 6, 11, 12, 14, 16, 17, 18, 21, 23, 24, 25, 27, 31, 32, 34, 37]
+-------------------------------------
+
+Epoch 2 starting ...
+Running FGSS step for random columns ...
+Current Score : 41193.0103938
+	Storing updated score ...
+	Score : 41193.0103938
+	alpha : 0.002
+	rows  : [4]
+	cols  : [0, 3, 6, 7, 8, 9, 10, 11, 13, 15, 16, 18, 23, 27, 28, 29, 30, 31, 34]
+Running FGSS step for random rows ...
+Current Score : 8118.40118602
+Epoch 2 ending...
+Prev Score : 41193.0103938
+
+-----Updating global score ... ------
+	Global Score : 41193.0103938
+	Global alpha : 0.002
+	Global rows  : [4]
+	Global cols  : [0, 3, 6, 7, 8, 9, 10, 11, 13, 15, 16, 18, 23, 27, 28, 29, 30, 31, 34]
+-------------------------------------
+
+Epoch 3 starting ...
+Running FGSS step for random columns ...
+Current Score : 44086.2736921
+	Storing updated score ...
+	Score : 44086.2736921
+	alpha : 0.002
+	rows  : [4]
+	cols  : [0, 4, 5, 7, 9, 10, 11, 13, 14, 18, 23, 25, 26, 29, 30, 32, 33]
+Running FGSS step for random rows ...
+Current Score : 7827.92037107
+Epoch 3 ending...
+Prev Score : 44086.2736921
+
+-----Updating global score ... ------
+	Global Score : 44086.2736921
+	Global alpha : 0.002
+	Global rows  : [4]
+	Global cols  : [0, 4, 5, 7, 9, 10, 11, 13, 14, 18, 23, 25, 26, 29, 30, 32, 33]
+-------------------------------------
+
+Epoch 4 starting ...
+Running FGSS step for random columns ...
+Current Score : 20935.124438
+	Storing updated score ...
+	Score : 20935.124438
+	alpha : 0.002
+	rows  : [4 2 5 0]
+	cols  : [0, 1, 2, 3, 4, 8, 12, 13, 14, 17, 18, 19, 21, 22, 25, 33, 34, 35, 36]
+Running FGSS step for random rows ...
+Current Score : 4641.52368801
+Epoch 4 ending...
+Prev Score : 20935.124438
+
+	Returning global score ...
+	Global Score : 20935.124438
+	Global alpha : 0.002
+	Global rows  : [4 2 5 0]
+	Global cols  : [0, 1, 2, 3, 4, 8, 12, 13, 14, 17, 18, 19, 21, 22, 25, 33, 34, 35, 36]
+ENDDD
+Done
+
+Process finished with exit code 0
