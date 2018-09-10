@@ -6,13 +6,16 @@ import seaborn as sns
 
 
 class DataVisualizer(object):
-    def plot_bar_graph(self, data, title):
-        print(data.shape)
+    def plot_histogram(self, data, title):
+        # print(data.shape)
         data = np.array(data)
-        buckets = pd.cut(data, 10)
 
+        buckets = pd.cut(data, 10)
         print(buckets.value_counts())
-        buckets.value_counts().plot.bar(rot=0, color="b", figsize=(20, 4))
+        # buckets.value_counts().plot.bar(rot=0, color="b", figsize=(20, 4))
+
+        plt.hist(data)
+
         plt.title(title)
         plt.show()
 
@@ -38,39 +41,56 @@ class DataVisualizer(object):
         # plt.yticks(range(len(corr.columns)), corr.columns)
         # plt.show()
 
+    def filter_data(self, data):
+        print("Filtering 0s and 1s ...")
+        result = []
+
+        for val in data:
+            if val > 0 and val < 1:
+                result.append(val)
+        return result
 
 def analyze_results():
     data_visualizer = DataVisualizer()
-    train_recon, test_recon, train_p_value, test_p_value = load_from_excel('reconstruction_errorsprocessed.xlsx')
+    train_recon, test_recon, train_p_value, test_p_value = load_from_excel('reconstruction_errors-non_sq.xlsx')
 
     # data_visualizer.plot_scatter_graph(train_recon[28])
 
-    data_visualizer.plot_bar_graph(train_recon[28], 'Train Set Reconstruction errors of one column (feature)')
-    data_visualizer.plot_bar_graph(train_recon.iloc[28], 'Training Reconstruction errors of one row (record)')
-    submatrix = train_recon.iloc[10:26][1:5]
-    data_visualizer.plot_bar_graph(np.array(submatrix).reshape((submatrix.shape[0] * submatrix.shape[1])),
-                                   'Train Set Reconstruction errors of 16 records and 5 features')
+    # train_recon = data_visualizer.filter_columns(train_recon, [0, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 24, 25, 26, 27, 29, 34, 37, 38, 39, 40])
+    data_visualizer.plot_histogram(data_visualizer.filter_data(train_recon[1]), 'Train Set Reconstruction errors of one column (feature)')
+    data_visualizer.plot_histogram(data_visualizer.filter_data(train_recon.iloc[28]), 'Train Set Reconstruction errors of one row (record)')
+    multi_rows = list(range(10, 26))
+    multi_cols = list(range(1,6)) + [11] + [22, 23] + [28] + list(range(30, 34)) + [35, 36]
+    submatrix = train_recon.iloc[multi_rows][multi_cols]
+    data_visualizer.plot_histogram(data_visualizer.filter_data(submatrix.values.flatten()),
+                                   'Train Set Reconstruction errors of multiple row/columns')
 
-    data_visualizer.plot_bar_graph(test_recon[28], 'Test Set Reconstruction errors of one column (feature)')
-    data_visualizer.plot_bar_graph(test_recon.iloc[28], 'Test Set Reconstruction errors of one row (record)')
-    submatrix = test_recon.iloc[10:26][1:5]
-    data_visualizer.plot_bar_graph(np.array(submatrix).reshape((submatrix.shape[0] * submatrix.shape[1])),
-                                   'Test Set Reconstruction errors of 16 records and 5 features')
+    data_visualizer.plot_histogram(data_visualizer.filter_data(test_recon[28]), 'Test Set Reconstruction errors of one column (feature)')
+    data_visualizer.plot_histogram(data_visualizer.filter_data(test_recon.iloc[28]), 'Test Set Reconstruction errors of one row (record)')
+    multi_rows = list(range(10, 26))
+    multi_cols = list(range(1, 5)) + [22, 23] + [28] + list(range(31, 34)) + [35]
+    submatrix = test_recon.iloc[multi_rows][multi_cols]
+    data_visualizer.plot_histogram(data_visualizer.filter_data(submatrix.values.flatten()),
+                                   'Test Set Reconstruction errors of multiple row/columns')
 
-    index = 28
-    res = train_p_value[index]
-    data_visualizer.plot_bar_graph(res, 'Train P value of one column (feature)')
-    data_visualizer.plot_bar_graph(train_p_value.iloc[index], 'Train P value of one row (record)')
-    submatrix = train_p_value.iloc[15:30]
-    data_visualizer.plot_bar_graph(np.array(submatrix).reshape((submatrix.shape[0] * submatrix.shape[1])),
-                                   'TrainP value of 15 rows (records)')
 
-    res = test_p_value[index]
-    data_visualizer.plot_bar_graph(res, 'Test P value of one column (feature)')
-    data_visualizer.plot_bar_graph(test_p_value.iloc[index], 'Test P value of one row (record)')
-    submatrix = test_p_value.iloc[15:30]
-    data_visualizer.plot_bar_graph(np.array(submatrix).reshape((submatrix.shape[0] * submatrix.shape[1])),
-                                   'Test P value of 15 rows (records)')
+    data_visualizer.plot_histogram(data_visualizer.filter_data(train_p_value[28]), 'Train P value of one column (feature)')
+    data_visualizer.plot_histogram(data_visualizer.filter_data(train_p_value.iloc[28]), 'Train P value of one row (record)')
+    multi_rows = list(range(10, 26))
+    multi_cols = list(range(1, 6)) + [11] + [22, 23] + [28] + list(range(31, 34)) + [36]
+    submatrix = train_p_value.iloc[multi_rows][multi_cols]
+    submatrix = train_p_value
+    data_visualizer.plot_histogram(data_visualizer.filter_data(submatrix.values.flatten()),
+                                   'TrainP value of multiple row/columns')
+
+    data_visualizer.plot_histogram(data_visualizer.filter_data(test_p_value[28]), 'Test P value of one column (feature)')
+    data_visualizer.plot_histogram(data_visualizer.filter_data(test_p_value.iloc[28]), 'Test P value of one row (record)')
+    multi_rows = list(range(10, 26))
+    multi_cols = list(range(1, 4)) + [28] + list(range(31, 34)) + [35, 36]
+    submatrix = test_p_value.iloc[multi_rows][multi_cols]
+    submatrix = test_p_value
+    data_visualizer.plot_histogram(data_visualizer.filter_data(submatrix.values.flatten()),
+                                   'Test P value of multiple row/columns')
 
     analyze_corr = train_recon.iloc[15:30][0:6]
     data_visualizer.correlation(analyze_corr)

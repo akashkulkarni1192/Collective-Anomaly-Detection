@@ -8,8 +8,8 @@ import math
 
 def shorten_data(Xnormal, Ynormal, Xanomaly, Yanomaly):
     print("Shortening the data ...")
-    # return Xnormal[:2000], Ynormal[:2000], Xanomaly[:1000], Yanomaly[:1000]
-    return Xnormal[:1000], Ynormal[:1000], Xanomaly[:200], Yanomaly[:200]
+    # return Xnormal[:8000], Ynormal[:8000], Xnormal[8000:10000], Ynormal[8000:10000], Xanomaly[:2000], Yanomaly[:2000]
+    return Xnormal[:800], Ynormal[:800], Xnormal[800:1000], Ynormal[800:1000], Xanomaly[:200], Yanomaly[:200]
 
 
 def split_train_set(trainset):
@@ -31,9 +31,9 @@ class CollectiveAnomalyDetection(object):
 
         if use_stored_result == False:
             print("Creating Training Reconstruction Error...")
-            train_recon_error = self.model.predict(T2)
+            train_recon_error = self.model.predict_non_squarred_error(T2)
             print("Creating Test Reconstruction Error...")
-            test_recon_error = self.model.predict(test_data)
+            test_recon_error = self.model.predict_non_squarred_error(test_data)
             print("Creating P Value...")
 
             p_value = self.create_p_value_matrix(train_recon_error, test_recon_error)
@@ -45,10 +45,10 @@ class CollectiveAnomalyDetection(object):
             test_recon_error_df = pd.DataFrame(test_recon_error, index=list(range(test_recon_error.shape[0])),
                                                columns=list(range(test_recon_error.shape[1])))
 
-            store_in_excel(train_recon_error_df, test_recon_error_df, p_value, train_p_value, 'reconstruction_errors', "processed")
+            store_in_excel(train_recon_error_df, test_recon_error_df, p_value, train_p_value, 'reconstruction_errors', "-non_sq")
         else:
             print("Loading existing stored data ...")
-            train_recon_error_df, test_recon_error_df, _, p_value = load_from_excel("reconstruction_errors100.xlsx")
+            train_recon_error_df, test_recon_error_df, _, p_value = load_from_excel("reconstruction_errorsprocessed.xlsx")
 
 
         # alpha_values = self.get_unique_alpha_values(p_value)
@@ -122,14 +122,14 @@ class CollectiveAnomalyDetection(object):
                 print("\tGlobal cols  : " + str(prev_cols))
                 print("-------------------------------------\n")
                 global_score = prev_score
-                global_cols = prev_rows
+                global_rows = prev_rows
                 global_cols = prev_cols
                 global_alpha = prev_alpha
 
         print("\n\tReturning global score ...")
         print("\tGlobal Score : " + str(global_score))
         print("\tGlobal alpha : " + str(global_alpha))
-        print("\tGlobal rows  : " + str(global_cols))
+        print("\tGlobal rows  : " + str(global_rows))
         print("\tGlobal cols  : " + str(global_cols))
 
         return global_rows, global_cols, global_alpha, global_score
@@ -238,15 +238,15 @@ class CollectiveAnomalyDetection(object):
 def main():
     data = read_data()
     Xnormal, Ynormal, Xanomaly, Yanomaly = distinguishAnomalousRecords(data)
-    Xnormal, Ynormal, Xanomaly, Yanomaly = shorten_data(Xnormal, Ynormal, Xanomaly, Yanomaly)
+    Xnormal, Ynormal, Xnormal_test, Ynormal_test, Xanomaly, Yanomaly = shorten_data(Xnormal, Ynormal, Xanomaly, Yanomaly)
 
     T1, T2 = split_train_set(Xnormal)
 
     # using 2 hidden layers
-    use_cached_model = False
+    use_cached_model = True
     use_stored_results = False
 
-    test_set = np.concatenate((Xnormal[:600], Xanomaly))
+    test_set = np.concatenate((Xnormal_test, Xanomaly))
     np.random.shuffle(test_set)
     collective_anomaly_detection = CollectiveAnomalyDetection(AutoEncoder(10, 5, test_set, use_cached_model))
     collective_anomaly_detection.run(T1=T1, T2=T2, test_data=test_set, cache=use_cached_model, use_stored_result=use_stored_results)
